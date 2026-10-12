@@ -34,7 +34,7 @@ kbd{border:1px solid #bbb;border-radius:3px;padding:0 3px;font-size:11px;backgro
 </style>
 </head>
 <body>
-<div id="map" aria-label="Bản đồ quy hoạch chồng lớp Google Maps"></div>
+<div id="map" aria-label="Bản đồ quy hoạch chồng lớp OpenStreetMap"></div>
 
 <div id="panel">
   <form id="f" role="search">
@@ -57,11 +57,7 @@ kbd{border:1px solid #bbb;border-radius:3px;padding:0 3px;font-size:11px;backgro
       <span id="opv">80%</span>
     </div>
 
-    <fieldset id="bases"><legend>Nền</legend>
-      <label><input type="radio" name="base" value="m" checked> Google Maps</label>
-      <label><input type="radio" name="base" value="s"> Vệ tinh</label>
-    </fieldset>
-    <div class="row"><label><input type="checkbox" id="lb" checked> Tên đường/ngõ phía trên bản vẽ</label></div>
+    <div class="row"><label><input type="checkbox" id="lb" checked> Tên đường phía trên bản vẽ</label></div>
 
     <div class="row">
       <button type="button" id="all">Toàn khu quy hoạch</button>
@@ -96,21 +92,19 @@ const V = L.latLngBounds([C.view.s, C.view.w], [C.view.n, C.view.e]);
 const fitView = () => map.fitBounds(V, innerWidth > 800 ? {paddingTopLeft: [395, 10], paddingBottomRight: [10, 10]} : {padding: [5, 5]});
 const map = L.map('map', {maxZoom: 22, zoomSnap: 0.25});
 fitView();
-const gl = (lyr, o = {}) => L.tileLayer(
-  'https://mt{s}.google.com/vt/lyrs=' + lyr + '&hl=vi&gl=VN&x={x}&y={y}&z={z}',
-  Object.assign({subdomains: '0123', maxZoom: 22, maxNativeZoom: 21, attribution: 'Bản đồ © Google'}, o));
-const bases = {m: gl('m'), s: gl('s')};
-bases.m.addTo(map);
+// Nen OpenStreetMap (tile.openstreetmap.org: dung nhe, bat buoc ghi nguon)
+const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom: 22, maxNativeZoom: 19, attribution: OSM}).addTo(map);
+// Ten duong (du lieu OSM, chi lop chu, trong suot) nam tren anh ban ve
 map.createPane('labels');
 map.getPane('labels').style.zIndex = 450;          // tren anh ban ve (overlayPane = 400)
 map.getPane('labels').style.pointerEvents = 'none';
-const labels = gl('h', {pane: 'labels'}).addTo(map);
+const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
+  {pane: 'labels', subdomains: 'abcd', maxZoom: 22, maxNativeZoom: 20,
+   attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
 L.control.scale({imperial: false}).addTo(map);
 
-document.querySelectorAll('input[name=base]').forEach(r => r.onchange = () => {
-  Object.values(bases).forEach(l => map.removeLayer(l));
-  bases[r.value].addTo(map).bringToBack();
-});
 $('lb').onchange = e => e.target.checked ? labels.addTo(map) : map.removeLayer(labels);
 
 // ---------- lop ban ve (chon 1) ----------
