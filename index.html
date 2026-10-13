@@ -696,8 +696,8 @@ kbd{border:1px solid #bbb;border-radius:3px;padding:0 3px;font-size:11px;backgro
 #lg{font-size:12px;gap:4px 10px}
 #lg span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;
   background:var(--c);border:1px solid #fff;box-shadow:0 0 0 1px #0006;vertical-align:-1px}
-.poi-t{background:none;border:0;box-shadow:none;padding:0 0 0 2px;font:600 11px/1.1 Arial,sans-serif;color:#222;
-  text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap}
+.poi-t{background:none;border:0;box-shadow:none;padding:0 0 0 3px;font:700 14px/1.15 Arial,sans-serif;color:#111;
+  text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
 .poi-t::before{display:none}
 
 #leg{position:fixed;z-index:2000;inset:0;background:#0008;display:flex;align-items:center;justify-content:center}
@@ -836,6 +836,18 @@ const pmOpts = {url: tiles, flavor: 'light', lang: 'vi', maxDataZoom: C.tileMaxZ
                 bounds: B.pad(0.05), attribution: OSM, devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
                 updateWhenZooming: false, keepBuffer: 1};
 let labels = {addTo() {}, remove() {}};
+// Phong to chu ten duong/khu: boc ham get() cua cac thuoc tinh font trong luat nhan ("400 12px ..." -> "400 17px ...")
+const LABEL_SCALE = 1.4;
+function scaleFonts(o, k, seen = new Set()) {
+  if (!o || typeof o !== 'object' || seen.has(o)) return;
+  seen.add(o);
+  if (typeof o.get === 'function' && ('family' in o || 'font' in o) && !o._scaled) {
+    const g = o.get.bind(o);
+    o.get = (z, f) => { const s = g(z, f); return typeof s === 'string' ? s.replace(/(\d+(?:\.\d+)?)px/, (_, n) => Math.round(n * k) + 'px') : s; };
+    o._scaled = true;
+  }
+  for (const v of Object.values(o)) scaleFonts(v, k, seen);
+}
 if (window.DecompressionStream) {
   // nen (duong, nha, mat nuoc) duoi ban ve; chu (ten duong, ngo, khu) tren ban ve
   const base = protomapsL.leafletLayer(pmOpts);
@@ -848,6 +860,7 @@ if (window.DecompressionStream) {
   labels.paintRules = [];
   labels.backgroundColor = undefined;
   labels.labelRules = labels.labelRules.filter(r => r.dataLayer !== 'pois');   // dia diem: lop rieng ben duoi
+  scaleFonts(labels.labelRules, LABEL_SCALE);
   labels.addTo(map);
 } else {
   $('msg').textContent = 'Trình duyệt quá cũ: không hiện được bản đồ nền. Hãy cập nhật Safari/Chrome.';
@@ -960,7 +973,7 @@ map.getPane('pois').style.zIndex = 460;            // tren ban ve va ten duong
 const poiR = L.canvas({pane: 'pois', tolerance: 6});
 const poiList = (C.pois || []).map(([lat, lon, name, c]) => {
   const [col, cname] = CAT[c] || CAT.khac;
-  const m = L.circleMarker([lat, lon], {renderer: poiR, pane: 'pois', radius: 5, color: '#fff', weight: 1.5,
+  const m = L.circleMarker([lat, lon], {renderer: poiR, pane: 'pois', radius: 7, color: '#fff', weight: 2,
                                         bubblingMouseEvents: false, fillColor: col, fillOpacity: 1})
     .bindPopup(() => popup(name, lat, lon, cname + ' (OpenStreetMap)'));
   m.poiName = name;
@@ -976,12 +989,12 @@ const poiNames = () => {
   if (on && !map.hasLayer(pois)) pois.addTo(map);
   if (!on && map.hasLayer(pois)) map.removeLayer(pois);
   const want = new Set();
-  if (on && z >= 18) {
+  if (on && z >= 17) {
     const vb = map.getBounds().pad(0.1);
     for (const m of poiList) { if (want.size >= NAME_MAX) break; if (vb.contains(m.getLatLng())) want.add(m); }
   }
   named.forEach(m => { if (!want.has(m)) m.unbindTooltip(); });
-  want.forEach(m => { if (!named.has(m)) m.bindTooltip(m.poiName, {permanent: true, direction: 'right', offset: [5, 0],
+  want.forEach(m => { if (!named.has(m)) m.bindTooltip(m.poiName, {permanent: true, direction: 'right', offset: [7, 0],
                                                          className: 'poi-t', pane: 'pois'}); });
   named = want;
 };
